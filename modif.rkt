@@ -375,7 +375,7 @@
         (sxml:modification-error "improper update-specifier: " curr)
         (and-let*
          ; Convert Location path to XPath AST
-         ((ast (txp:xpath->ast (car curr))))
+         ((ast (txp:sxpath->ast (car curr))))
          (call-with-values
           (lambda ()
             (if
@@ -455,12 +455,12 @@
                   ((move-into move-following move-preceding)
                    (if
                     (or (null? (cddr curr))  ; no lpath supplied
-                        (not (string? (caddr curr))))
+                        (not (or (list? curr) (string? (caddr curr)))))
                     (sxml:modification-error
                      "improper destination location path for move action: "
                      curr)
                     (and-let*
-                     ((ast (txp:xpath->ast (caddr curr)))
+                     ((ast (txp:sxpath->ast (caddr curr)))
                       (txpath-pair (ddo:ast-location-path ast #f #t 0 '(0))))
                      (iter (cdr src)
                            (cons
