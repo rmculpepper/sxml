@@ -1,5 +1,6 @@
 #lang racket/base
-(require "ssax/sxpathlib.rkt"
+(require racket/list
+         "ssax/sxpathlib.rkt"
          "xpath-context_xlink.rkt")
 (provide (all-defined-out))
 
@@ -15,13 +16,6 @@
 
 ;=========================================================================
 ; Miscellaneous helpers
-
-; Returns the last member of the lst
-; lst is expected to be non-empty
-(define (ddo:list-last lst)
-  (if (null? (cdr lst))
-      (car lst)
-      (ddo:list-last (cdr lst))))
 
 ; Selects all attribute and child nodes of a given 'node'
 ; Node is not supposed to be a context
@@ -883,7 +877,7 @@
          '())
         ((and (pair? node) (not (symbol? (car node))))  ; non-empty nodeset
          (reverse  ; restore document order
-          (prec (ddo:list-last node))))
+          (prec (last node))))
         (else  ; a single node
          (reverse (prec node)))))))
 
