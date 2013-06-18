@@ -41,7 +41,10 @@
 @include-section["sxpath.scrbl"]
 @include-section["sxslt.scrbl"]
 
+@;{
+@; Don't show auto-generated "undocumentation"
 @include-section["extracted-sperber.scrbl"]
 @include-section["all-exported.scrbl"]
+}
 
 @(close-eval the-eval)
