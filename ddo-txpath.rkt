@@ -1,5 +1,6 @@
 #lang racket/base
 (require racket/promise
+         racket/vector
          "ssax/sxpathlib.rkt"
          srfi/2
          "sxpath-ext.rkt"
@@ -21,19 +22,7 @@
 ; Miscellaneous
 
 ; Implement 'or' as a function, so that we could 'apply' it
-(define (ddo:or . args)
-  (if (null? args) #f (or (car args) (apply ddo:or (cdr args)))))
-
-;(define (ddo:foldl op init lst)
-;  (if (null? lst)
-;      init
-;      (ddo:foldl op (op (car lst) init) (cdr lst))))
-
-(define (ddo:foldr op init lst)
-  (if (null? lst)
-      init
-      (op (car lst)
-          (ddo:foldr op init (cdr lst)))))
+(define (ddo:or . args) (ormap values args))
 
 ; Definition of types
 (define ddo:type-nodeset 'ddo:type-nodeset)
@@ -756,17 +745,9 @@
 ; Allocates the new vector from `vect' with the exception of position `k' which
 ; is replaced with `obj'
 (define (ddo:vector-copy-set vect k obj)
-  (let loop ((src (vector->list vect))
-             (pos 0)
-             (res '()))
-    (if
-     (null? src)  ; iteration is over
-     (list->vector (reverse res))
-     (loop (cdr src)
-           (+ pos 1)
-           (cons
-            (if (= pos k) obj (car src))
-            res)))))
+  (let ([vect2 (vector-copy vect)])
+    (when (< k (vector-length vect2)) (vector-set! vect2 k obj))
+    vect2))
 
 ; Extends `var-binding' with a vector data structure for binding variable
 ; values and values for deep predicates.
@@ -869,7 +850,7 @@
 (define (ddo:charlst->branch lst value)
   (if (null? (cdr lst))  ; this is the last character in the lst
       (list (car lst) (cons 'value value))
-      `(,(car lst) #f ,(ddo:charlst->branch (cdr lst) value))))
+      (list (car lst) #f (ddo:charlst->branch (cdr lst) value))))
 
 ; Adds a new string to string-tree
 (define (ddo:add-var-to-tree var-name var-value tree)
@@ -1481,7 +1462,7 @@
 (define (ddo:ast-predicate-list
          op-lst num-anc single-level? pred-nesting vars2offsets)
   (let ((pred-res-lst
-         (ddo:foldr          
+         (foldr          
           (lambda (op init)
             (cons
              (ddo:ast-predicate
@@ -1565,7 +1546,7 @@
 ; Applies AST processing to a list of operations
 (define (ddo:apply-ast-procedure
          ast-procedure op-lst num-anc single-level? pred-nesting vars2offsets)
-  (ddo:foldr
+  (foldr
    (lambda (expr init)
      (cons
       (ast-procedure
@@ -1781,7 +1762,7 @@
 ; operation is time-consuming and should be avoided
 (define (ddo:ast-union-expr op num-anc single-level? pred-nesting vars2offsets)
   (let ((expr-res-lst
-         (ddo:foldr
+         (foldr
           (lambda (expr init)
             (let ((expr-res
                    (if 
@@ -2115,7 +2096,7 @@
 (define (ddo:ast-function-arguments
          op-lst single-level? pred-nesting vars2offsets)
   (let ((arg-res-lst
-         (ddo:foldr
+         (foldr
           (lambda (op init)            
             (cons
              (if
