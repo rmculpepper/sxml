@@ -1,12 +1,63 @@
-#lang scribble/doc
-@(require scribble/manual
-          scribble/core
+#lang scribble/manual
+@(require scribble/core
           "util.rkt"
           scribble/racket
           (for-syntax racket/base)
           (for-label sxml))
 
 @title[#:tag "sxpath"]{Search (SXPath)}
+
+The @hyperlink["https://www.w3.org/TR/xpath/"]{W3C "XPath" standard} describes a standardized way to perform
+searches in XML documents. For instance, the XPath string 
+@racket["/A/B/C"] (thank you, Wikipedia) describes a search for
+a @tt{C} element whose parent is a @tt{B} element whose parent
+is an @tt{A} element that is the root of the document.
+
+The @racket[sxpath] function performs a similar search over SXML data,
+ using either the standard XPath strings or a list of Racket values.
+
+@interaction[#:eval (make-base-eval)
+  (require sxml/sxpath)
+  ((sxpath "/A/B/C")
+   '(*TOP* (A (B (C)))))
+  ((sxpath '(A B C))
+   '(*TOP* (A (B (C)))))
+  ((sxpath "//p[contains(@class, 'blue')]/text()")
+   '(*TOP*
+     (body
+      (p (|@| (class "blue")) "P1")
+      (p (|@| (class "blue green")) "P2")
+      (p (|@| (class "red")) "P3"))))]
+
+(This documentation desperately needs more examples.)
+
+Let's consider the following XML document:
+@verbatim{
+"<AAA>
+  <BBB>
+     <CCC/>
+     <www> www content <xxx/><www>
+     <zzz/>
+  </BBB>
+  <XXX>
+     <DDD> content in ccc 
+     </DDD>
+  </XXX>
+</AAA>"}
+
+If we use Neil Van Dyke's html parser, we might parse this into
+the following sxml document:
+
+@interaction[#:eval the-eval
+(define example-doc
+  '(*TOP*
+    (aaa "\n" "  "
+      (bbb "\n" "     "
+        (ccc) "\n" "     "
+        (www " www content " (xxx) (www "\n" "     " (zzz) "\n" "  ")))
+      "\n" "  "
+      (xxx "\n" "     " (ddd " content in ccc \n" "     ") "\n" "  ")
+      "\n")))]
 
 @defproc[(sxpath [path (or/c list? string?)]
                  [ns-bindings (listof (cons/c symbol? string?)) '()])
@@ -80,6 +131,11 @@
       (node-pos _number))
 (line (sxpathr _path)
       (sxml:filter (sxpath _path)))))
+
+To extract the @tt{xxx}'s inside the @tt{aaa} from the example document:
+
+@interaction[#:eval the-eval
+((sxpath '(aaa xxx)) example-doc)]
 
 To extract all cells from an HTML table:
 
@@ -203,8 +259,89 @@ shortcut is actually the namespace. Thus:
 ]
 
 Ah well.
-}
 
+@section{Filtering}
+
+It may sometimes be the case that you're looking for @racket[abc]
+nodes that contain @racket[def] nodes. You could try
+
+@racketblock[(sxpath '(// abc def))]
+
+... but that would give you the inner @racket[def] nodes, not the
+@racket[abc] parent nodes that contain the @racket[def] nodes.
+If you pore over the expansion above, you will discover that you can
+do this, using ... well, essentially, using a pair of nested lists:
+
+@racketblock[
+((sxpath '(// (abc (def))))
+ '(x (x (abc (x)
+             (def "1")))
+     (abc (x) "2")
+     (abc (def) "3")))]
+
+Note that this is also the right way to go if for instance you're looking
+for a @racket[div] with a particular id:
+
+@codeblock|{
+((sxpath '(// (div (@ id (equal? "wanted")))))
+ '(body (foo (div (@ (id "a"))
+                  (div (@ (id "b")) "abc")
+                  "def")
+             (div (@ (id "wanted"))
+                  (div (@ (id "c")) "qq")
+                  "ghi"))))
+}|
+
+But what if you want to check not that the string is equal to a fixed value, but
+rather that it contains a given value? This is common in the case of the "class"
+attribute, which often has a space-separated list of tokens. It turns out that
+SXML's combinator library can handle this just fine, but in order to use it, you'll
+need to unzip the sxpath to allow you to use the combinators. To see this, let's
+amend the earlier example to find a class containing the token @racket["wanted"].
+
+Our first step is to "unzip" the sxpath syntax. The following query produces exactly
+the same result as the previous one:
+
+@codeblock|{
+((node-join (sxpath '(//))
+            (node-reduce
+             (sxpath '(div))
+             (sxml:filter (node-join (sxpath '(@ id))
+                                     (select-kids
+                                      (node-equal? "wanted"))))))
+ '(body (foo (div (@ (id "a"))
+                  (div (@ (id "b")) "abc")
+                  "def")
+             (div (@ (id "wanted"))
+                  (div (@ (id "c")) "qq")
+                  "ghi"))))
+}|
+
+At this point, we can replace @racket[node-equal?] with any predicate on strings. In the following
+example we generalize it to look for occurrences of the token, and then we add a bunch of
+other junk to the specified id, to show that it still works:
+
+@codeblock|{
+;; does the given string occur as a "word" in the text?
+(define (str-includes? str)
+  (λ (text) (member str (string-split text))))
+
+((node-join (sxpath '(//))
+            (node-reduce
+             (sxpath '(div))
+             (sxml:filter (node-join (sxpath '(@ id))
+                                     (select-kids
+                                      (str-includes? "wanted"))))))
+ '(body (foo (div (@ (id "a"))
+                  (div (@ (id "b")) "abc")
+                  "def")
+             (div (@ (id "wanted bar baz"))
+                  (div (@ (id "c")) "qq")
+                  "ghi"))))
+}|
+
+
+}
 @defproc[(txpath [xpath-location-path string?]
                  [ns-bindings (listof (cons/c symbol? string?)) '()])
          (-> (or/c _node nodeset?) nodeset?)]{
@@ -321,13 +458,15 @@ node-trace
 ]
 }
 
-@defproc[(node-join [selector @#,tech{sxml-converter}])
+@defproc[(node-join [selector @#,tech{sxml-converter}] ...)
+         @#,tech{sxml-converter}]{
+Forms a new sxml-converter that is the sequential composition of
+the sxml-converters in the list.}
+
+@defproc[(node-reduce [converter @#,tech{sxml-converter}] ...)
          @#,tech{sxml-converter}]
 
-@defproc[(node-reduce [converter @#,tech{sxml-converter}])
-         @#,tech{sxml-converter}]
-
-@defproc[(node-or [converter @#,tech{sxml-converter}])
+@defproc[(node-or [converter @#,tech{sxml-converter}] ...)
          @#,tech{sxml-converter}]
 
 @defproc[(node-closure [converter @#,tech{sxml-converter}])
@@ -349,6 +488,8 @@ node-trace
   XPath axes and accessors.
 }
 
+The following procedures depend explicitly on the root node.
+
 @deftogether[[
 @defproc[((sxml:parent [pred @#,tech{sxml-converter-as-predicate}])
           [root _node])
@@ -367,13 +508,34 @@ node-trace
 @defproc[((sxml:following-sibling [pred @#,tech{sxml-converter-as-predicate}])
           [root _node])
          @#,tech{sxml-converter}]
+]]{
+   Gosh, I wish these functions were documented.
+}
+
 @defproc[((sxml:preceding [pred @#,tech{sxml-converter-as-predicate}])
           [root _node])
-         @#,tech{sxml-converter}]
+         @#,tech{sxml-converter}]{
+ given a predicate and a root node, returns a procedure that accepts a 
+ nodeset and returns all nodes that appear before the given nodes in
+ document order, filtered using the predicate.
+ 
+ Here's an example:
+ 
+ @interaction[#:eval the-eval
+(((sxml:preceding (ntype?? 'www)) example-doc) ((sxpath `(aaa xxx)) example-doc))]
+ 
+}
+
 @defproc[((sxml:preceding-sibling [pred @#,tech{sxml-converter-as-predicate}])
           [root _node])
-         @#,tech{sxml-converter}]
-]]{
+         @#,tech{sxml-converter}]{
+ given a predicate and a root node, returns a procedure that accepts a
+ nodeset and returns all dones that are preceding siblings (in document
+ order) of the given nodes.
+ 
+@interaction[#:eval the-eval
+(define doc '(*TOP* (div (p "foo") (p "bar")
+                         (img "baz") (p "quux"))))
+(((sxml:preceding-sibling (ntype?? 'p)) doc) ((sxpath '(// img)) doc))]
+                                  }
 
-  XPath axes and accessors that depend on the root node.
-}

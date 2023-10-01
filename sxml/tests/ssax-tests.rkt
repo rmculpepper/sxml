@@ -1,4 +1,5 @@
 #lang racket/base
+
 (require (for-syntax racket/base)
          (only-in racket/port call-with-input-string)
          (only-in racket/pretty [pretty-write pp])
@@ -6,11 +7,12 @@
          (only-in racket/base [quote racket:quote])
          srfi/13/string
          rackunit
+         rackunit/text-ui
          (except-in "../ssax/myenv.ss" assert)
+         "../ssax/errors-and-warnings.rkt"
          "../ssax/parse-error.rkt"
          "../ssax/input-parse.rkt"
          "../ssax/SSAX-code.rkt")
-(provide ssax-tests)
 
 #|
 Current status: all tests pass; some print warnings.
@@ -115,11 +117,10 @@ Current status: all tests pass; some print warnings.
     (test "\r\n\r\n]]>" '("" " NL" "" " NL"))
     (test "\r\n\r\na]]>" '("" " NL" "" " NL" "a" ""))
     (test "\r\r\r\na]]>" '("" " NL" "" " NL" "" " NL" "a" ""))
-    (test "abc&!!!]]>" '("abc" "&" "" "" "!!!" ""))
+    (test "abc&!!!]]>" '("abc&!!!" ""))
+    (test "abc&!!!]]>" '("abc&!!!" ""))
     (test "abc]]&gt;&gt&amp;]]]&gt;and]]>"
-          '("abc" "" "]]" "" "" ">" "" "&" "gt" "" "" "&" "amp" "" ";" "" "]" ""
-            "]]" "" "" ">" "and" ""))
-    ))
+        '("abc" "" "]]" "" "&gt;&gt&amp;" "" "]" "" "]]" "" "&gt;and" ""))))
 
 (let ()
   (define (f str decl-entities)
@@ -330,13 +331,14 @@ Current status: all tests pass; some print warnings.
                     (test "TAG1" '((TAG1 PCDATA ((HREF CDATA REQUIRED #f)
                                                     ((A . HREF) CDATA IMPLIED "c"))))
                           "HREF='b'>")))
+    (parameterize ([current-sxml-warning-handler (lambda args void)])
     (assert (equal? `((UA . TAG1)
                       ((HREF . "b") ((UA . HREF) . "c"))
                       ,namespaces PCDATA)
                     (test "A:TAG1" '(((A . TAG1) PCDATA
-                                      ((HREF NMTOKEN REQUIRED #f)
-                                       ((A . HREF) CDATA IMPLIED "c"))))
-                          "HREF='b'>")))
+                                                 ((HREF NMTOKEN REQUIRED #f)
+                                                  ((A . HREF) CDATA IMPLIED "c"))))
+                          "HREF='b'>"))))
     (assert (equal? `((,urn-b . TAG1) ((HREF . "b"))
                       ,(cons `(B ,urn-b . ,urn-b) namespaces) PCDATA)
                     (test "B:TAG1"
@@ -433,7 +435,9 @@ Current status: all tests pass; some print warnings.
                           (*DEFAULT* . ssax:warn))))
 |#
 
-(let ()
+
+;; eat warnings:
+(parameterize ([current-sxml-warning-handler (lambda args void)])
   (define (simple-parser str doctype-fn)
     (call-with-input-string str
       (lambda (port)
@@ -477,6 +481,8 @@ Current status: all tests pass; some print warnings.
   (define-check (test str doctype-fn expected)
     (let ((result (simple-parser str doctype-fn)))
       (assert (equal? result expected))))
+  (define (local-test str doctype-fn)
+    (simple-parser str doctype-fn))
 
   (test-case "simple parser"
     (test "<BR/>" dummy-doctype-fn '((BR)))
@@ -502,11 +508,14 @@ Current status: all tests pass; some print warnings.
     (test "<itemize><item>This   is item 1 </item>\n<!-- Just:a comment --><item>Item 2</item>\n </itemize>" dummy-doctype-fn 
           `((itemize (item "This   is item 1 ")
              "\n" (item "Item 2") "\n ")))
-    (test " <P><![CDATA[<BR>\n<![CDATA[<BR>]]&gt;]]></P>"
-          dummy-doctype-fn  `((P "<BR>" ,nl "<![CDATA[<BR>" "]]" "" ">")))
+    (check-equal? (local-test " <P><![CDATA[<BR>\n<![CDATA[<BR>]]&gt;]]></P>"
+                              dummy-doctype-fn)
+                  `((P "<BR>" ,nl "<![CDATA[<BR>" "]]" "&gt;")))
+    #;(test " <P><![CDATA[<BR>\n<![CDATA[<BR>]]&gt;]]></P>"
+          dummy-doctype-fn  )
 
     (test " <P><![CDATA[<BR>\r<![CDATA[<BR>]]&gt;]]></P>"
-          dummy-doctype-fn `((P "<BR>" ,nl "<![CDATA[<BR>" "]]" "" ">")))
+          dummy-doctype-fn `((P "<BR>" ,nl "<![CDATA[<BR>" "]]" "&gt;")))
 
     (test "<?xml version='1.0'?>\n\n<Reports TStamp='1'></Reports>"
           dummy-doctype-fn '((Reports (@ (TStamp "1")))))
@@ -671,11 +680,15 @@ Current status: all tests pass; some print warnings.
                               (#f UA . URI1))))))))
     ))
 
-(let ()
+(parameterize ([current-sxml-warning-handler (lambda args void)])
   (define-check (test str namespace-assig expected-res)
     (let ((result (ssax:xml->sxml (open-input-string str) namespace-assig)))
       (assert (equal_? result expected-res))))
+  (define (local-test str namespace-assig)
+    (ssax:xml->sxml (open-input-string str) namespace-assig))
   (test-case "ssax:xml->sxml"
+    (check-equal? (local-test "<e><![CDATA[&gt;]]></e>" '())
+                  '(*TOP* (e "&gt;")))
     (test " <BR/>" '() '(*TOP* (BR)))
     (test "<BR></BR>" '() '(*TOP* (BR)))
     (test " <BR CLEAR='ALL'\nCLASS='Class1'/>" '()
@@ -698,7 +711,7 @@ Current status: all tests pass; some print warnings.
 	  `(*TOP* (P "some text <1\n\""
                      (B "strong") "\"\n")))
     (test " <P><![CDATA[<BR>\n<![CDATA[<BR>]]&gt;]]></P>" '()
-	  `(*TOP* (P "<BR>\n<![CDATA[<BR>]]>")))
+	  `(*TOP* (P "<BR>\n<![CDATA[<BR>]]&gt;")))
     ;; (test "<T1><T2>it&apos;s\r\nand   that\n</T2>\r\n\r\n\n</T1>" '()
     ;;       '(*TOP* (T1 (T2 "it's\nand   that\n") "\n\n\n")))
     (test "<T1><T2>it&apos;s\r\nand   that\n</T2>\r\n\r\n\n</T1>" '()
@@ -970,3 +983,5 @@ Current status: all tests pass; some print warnings.
                                      "VRB05KT"))))))
     ))
 ))
+
+  (run-tests ssax-tests)
