@@ -1,11 +1,16 @@
 #lang racket/base
-(require srfi/13/string
+(require (only-in racket/string string-prefix?)
          "ssax/sxpathlib.rkt"
          "ssax/util.rkt"
          "sxml-tools.rkt"
          "sxpath-ext.rkt"
          "xpath-parser.rkt")
 (provide (all-defined-out))
+
+;; compat
+(define (string-prefix-ci? s prefix)
+  (and (>= (string-length s) (string-length prefix))
+       (string-ci=? (substring s 0 (string-length prefix)) prefix)))
 
 ;; Classic TXPath implementation based on sxpathlib, sxpath-ext and txp-parser
 ;
@@ -268,7 +273,7 @@
                  (arg-func1 nodeset root-node context var-binding)))
           (str2 (sxml:string
                  (arg-func2 nodeset root-node context var-binding))))
-      (string-prefix? str2 str1))))
+      (string-prefix? str1 str2))))
 
 ; contains(string, string)
 (define (sxml:core-contains arg-func1 arg-func2)
@@ -467,7 +472,7 @@
              (and
               lng
               (or (string-ci=? arg lng)
-                  (string-prefix-ci? (string-append arg "-") lng)))
+                  (string-prefix-ci? lng (string-append arg "-"))))
              (rpt
               (append
                (map

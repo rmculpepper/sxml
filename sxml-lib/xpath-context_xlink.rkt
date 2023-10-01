@@ -1,5 +1,5 @@
 #lang racket/base
-(require srfi/13/string
+(require (only-in racket/string string-prefix?)
          "sxml-tools.rkt"
          "sxpath-ext.rkt"
          "xpath-parser.rkt"
@@ -9,7 +9,7 @@
          "ssax/multi-parser.rkt"
          "ssax/access-remote.rkt"
          "ssax/SSAX-code.rkt"
-         srfi/2
+         "andlet.rkt"
          "ssax/sxpathlib.rkt"
          "ssax/util.rkt"
          "ssax/xlink-parser.rkt")

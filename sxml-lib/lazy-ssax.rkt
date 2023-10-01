@@ -1,6 +1,5 @@
 #lang racket/base
 (require racket/promise
-         srfi/13/string
          "ssax/parse-error.rkt"
          "ssax/SSAX-code.rkt"
          "lazy-xpath.rkt")
@@ -172,7 +171,7 @@
                ;(pp (list string1 string2 seed))
                (lazy:replace-common
                 seed
-                (if (string-null? string2)
+                (if (zero? (string-length string2))
                     (cons string1 (lazy:seed-common seed))
                     (list* string2 string1 (lazy:seed-common seed)))))
 

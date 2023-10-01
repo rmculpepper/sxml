@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/list
-         srfi/13/string
+         (only-in racket/string string-contains?)
          "myenv.ss")
 (provide (all-defined-out))
 
@@ -69,10 +69,11 @@
 ;			String utilities
 ; See SRFI-13 or srfi-13-local.scm
 
-
 ; Return the index of the last occurence of a-char in str, or #f
 ; See SRFI-13
-(define string-rindex string-index-right)
+(define (string-rindex str find-c)
+  (for/last ([c (in-string str)] [index (in-naturals)] #:when (eqv? c find-c))
+    index))
 
 ; -- procedure+: substring? PATTERN STRING
 ;     Searches STRING to see if it contains the substring PATTERN.
@@ -82,7 +83,9 @@
 ;          (substring? "rat" "pirate")             =>  2
 ;          (substring? "rat" "outrage")            =>  #f
 ;          (substring? "" any-string)              =>  0
-(define (substring? pattern str) (string-contains str pattern))
+(define (substring? pattern str)
+  #;(string-contains str pattern)
+  (string-contains? str pattern))
 
 
 ; -- procedure+: string->integer STR START END
@@ -199,7 +202,8 @@
 			; resolver of overloading...
 			; if omitted, maxsplit defaults to
 			; (inc (string-length str))
-  (if (string-null? str) '()
+  (if (zero? (string-length str))
+      '()
       (if (null? rest) 
           (split-by-whitespace str (inc (string-length str)))
           (let ((charset (car rest))

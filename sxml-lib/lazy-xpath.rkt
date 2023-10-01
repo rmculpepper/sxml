@@ -1,10 +1,10 @@
 #lang racket/base
 (require racket/promise
          (only-in racket/port call-with-input-string)
-         srfi/13/string
+         (only-in racket/string string-prefix?)
          "ssax/sxpathlib.rkt"
          "ssax/util.rkt"
-         srfi/2
+         "andlet.rkt"
          "ssax/errors-and-warnings.rkt"
          "sxpath-ext.rkt"
          "xpath-parser.rkt"
@@ -12,6 +12,10 @@
          "xpath-ast.rkt"
          "xpath-context_xlink.rkt")
 (provide (all-defined-out))
+
+(define (string-prefix-ci? s prefix)
+  (and (>= (string-length s) (string-length prefix))
+       (string-ci=? (substring s 0 (string-length prefix)) prefix)))
 
 ;; This module implements lazy SXPath evaluation over lazy SXML documents
 ;
@@ -1208,7 +1212,7 @@
           (str2 (lazy:string
                  (lazy:contextset->nodeset
                   (arg-func2 nodeset position+size var-binding)))))
-      (string-prefix? str2 str1))))
+      (string-prefix? str1 str2))))
 
 ; contains(string, string)
 (define (lazy:core-contains num-anc arg-func1 arg-func2)
@@ -1413,7 +1417,7 @@
               )))))
       (and (not (null? lng))
            (or (string-ci=? arg (lazy:car lng))
-               (string-prefix-ci? (string-append arg "-") (lazy:car lng)))))))
+               (string-prefix-ci? (lazy:car lng) (string-append arg "-")))))))
 
 ;-------------------------------------------------
 ; 4.4 Number Functions

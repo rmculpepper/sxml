@@ -1,8 +1,8 @@
 #lang racket/base
 (require racket/promise
          racket/vector
+         "andlet.rkt"
          "ssax/sxpathlib.rkt"
-         srfi/2
          "sxpath-ext.rkt"
          "txpath.rkt"
          "xpath-ast.rkt"

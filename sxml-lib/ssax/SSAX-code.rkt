@@ -1,10 +1,21 @@
 #lang racket/base
-(require srfi/13/string
+(require (only-in racket/string) ;; srfi/13/string
          (only-in racket/port call-with-input-string)
          "myenv.ss"
          "parse-error.ss"
          "input-parse.ss")
 (provide (all-defined-out))
+
+;; compat
+(define (string-index s find-c)
+  (for/or ([c (in-string s)]
+           [index (in-naturals)]
+           #:when (eqv? c find-c))
+    index))
+(define (string-concatenate/shared strs)
+  (apply string-append strs))
+(define (string-concatenate-reverse/shared strs)
+  (apply string-append (reverse strs)))
 
 ;	Functional XML parsing framework: SAX/DOM and SXML parsers
 ;	      with support for XML Namespaces and validation
@@ -632,7 +643,7 @@
 	(if (not (eqv? (peek-char port) #\]))
 	    (loop (str-handler fragment "]" seed))
 	    (let check-after-second-braket
-		((seed (if (string-null? fragment) seed
+		((seed (if (zero? (string-length fragment)) seed
 			   (str-handler fragment "" seed))))
 	      (case (peek-next-char port)	; after the second bracket
 		((#\>) (read-char port)	seed)	; we have read "]]>"
@@ -852,8 +863,7 @@
 	       (or (attlist-add attr-list 
 		     (cons name 
 			   (string-concatenate-reverse/shared
-			     (read-attrib-value delimiter port entities
-						      '()))))
+                            (read-attrib-value delimiter port entities '()))))
 		   (parser-error port "[uniqattspec] broken for " name))))))))
 ))
 
@@ -1198,7 +1208,7 @@
 
       (handle-fragment
        (lambda (fragment str-handler seed)
-	 (if (string-null? fragment) seed
+	 (if (zero? (string-length fragment)) seed
 	     (str-handler fragment "" seed))))
       )
 
@@ -1905,7 +1915,7 @@
 
 	     CHAR-DATA-HANDLER
 	     (lambda (string1 string2 seed)
-	       (if (string-null? string2) (cons string1 seed)
+	       (if (zero? (string-length string2)) (cons string1 seed)
 		   (cons* string2 string1 seed)))
 
 	     DOCTYPE

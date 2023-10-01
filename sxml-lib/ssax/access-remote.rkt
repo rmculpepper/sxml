@@ -2,7 +2,7 @@
 (require net/url
          net/head
          racket/path
-         srfi/13/string
+         (only-in racket/string string-prefix?)
          "errors-and-warnings.rkt")
 (provide open-input-resource
          ar:resolve-uri-according-base
@@ -46,7 +46,7 @@
 ;  'html - for a resource that is an HTML document
 ;  'unknown - for any other resource type
 (define (ar:resource-type req-uri)
-  (cond [(string-prefix? "http://" req-uri)  ; HTTP scheme is used in REQ-URI
+  (cond [(string-prefix? req-uri "http://")  ; HTTP scheme is used in REQ-URI
          (with-handlers ([exn:fail? (lambda (exn) #f)])
            (call/input-url (string->url req-uri) head-impure-port
              (lambda (port)
@@ -54,14 +54,14 @@
                       [content-type (extract-field "content-type" headers)])
                  (cond [(not content-type) ;; no content-type specified
                         'unknown]
-                       [(string-prefix? "text/xml" content-type)
+                       [(string-prefix? content-type "text/xml")
                         'xml]
-                       [(string-prefix? "text/html" content-type)
+                       [(string-prefix? content-type "text/html")
                         'html]
-                       [(string-prefix? "text/plain" content-type)
+                       [(string-prefix? content-type "text/plain")
                         'plain]
                        [else 'unknown])))))]
-        [(string-prefix? "file://" req-uri)
+        [(string-prefix? req-uri "file://")
          (define filename (substring req-uri 7))
          (cond [(not (file-exists? filename))  ; file doesn't exist
                 #f]

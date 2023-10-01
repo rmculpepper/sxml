@@ -1,6 +1,6 @@
 #lang racket/base
 (require "myenv.ss"
-         srfi/13/string
+         (only-in racket/string string-join)
          "parse-error.ss"
          "SSAX-code.ss"
          "ssax-prim.ss"
@@ -434,9 +434,9 @@
            CHAR-DATA-HANDLER
            (lambda (string1 string2 seed)
              (cons
-              (if(string-null? string2) 
-                 (cons string1 (car seed))
-                 (cons* string2 string1 (car seed)))
+              (if (zero? (string-length string2))
+                  (cons string1 (car seed))
+                  (cons* string2 string1 (car seed)))
               (cdr seed)))
          
            DOCTYPE
