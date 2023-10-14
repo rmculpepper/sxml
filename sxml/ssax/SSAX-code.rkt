@@ -1,5 +1,5 @@
 #lang racket/base
-(require srfi/13/string
+(require "../util.rkt"
          (only-in racket/port call-with-input-string)
          "myenv.ss"
          "parse-error.ss"

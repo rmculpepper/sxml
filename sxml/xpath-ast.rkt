@@ -1,5 +1,5 @@
 #lang racket/base
-(require srfi/2
+(require "util.rkt"
          "ssax/errors-and-warnings.rkt"
          "xpath-parser.rkt")
 (provide (all-defined-out))

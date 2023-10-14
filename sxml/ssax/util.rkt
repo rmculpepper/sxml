@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/list
-         srfi/13/string
+         "../util.rkt"
          "myenv.ss")
 (provide (all-defined-out))
 

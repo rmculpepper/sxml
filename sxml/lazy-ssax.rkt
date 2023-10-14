@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/promise
-         srfi/13/string
+         "util.rkt"
          "ssax/parse-error.rkt"
          "ssax/SSAX-code.rkt"
          "lazy-xpath.rkt")

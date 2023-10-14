@@ -1,5 +1,5 @@
 #lang racket/base
-(require srfi/13/string
+(require "util.rkt"
          "sxml-tools.rkt"
          "sxpath-ext.rkt"
          "xpath-parser.rkt"
@@ -9,7 +9,6 @@
          "ssax/multi-parser.rkt"
          "ssax/access-remote.rkt"
          "ssax/SSAX-code.rkt"
-         srfi/2
          "ssax/sxpathlib.rkt"
          "ssax/util.rkt"
          "ssax/xlink-parser.rkt")
@@ -787,7 +786,7 @@
           (str2 (sxml:string
                  (draft:contextset->nodeset
                   (arg-func2 nodeset position+size var-binding)))))
-      (string-prefix? str2 str1))))
+      (srfi:string-prefix? str2 str1))))
 
 ; contains(string, string)
 (define (draft:core-contains num-anc arg-func1 arg-func2)
@@ -993,7 +992,7 @@
               )))))
       (and (not (null? lng))
            (or (string-ci=? arg (car lng))
-               (string-prefix-ci? (string-append arg "-") (car lng)))))))       
+               (srfi:string-prefix-ci? (string-append arg "-") (car lng)))))))       
   
 
 ;-------------------------------------------------

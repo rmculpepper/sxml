@@ -1,10 +1,9 @@
 #lang racket/base
 (require racket/promise
          (only-in racket/port call-with-input-string)
-         srfi/13/string
+         "util.rkt"
          "ssax/sxpathlib.rkt"
          "ssax/util.rkt"
-         srfi/2
          "ssax/errors-and-warnings.rkt"
          "sxpath-ext.rkt"
          "xpath-parser.rkt"
@@ -1208,7 +1207,7 @@
           (str2 (lazy:string
                  (lazy:contextset->nodeset
                   (arg-func2 nodeset position+size var-binding)))))
-      (string-prefix? str2 str1))))
+      (srfi:string-prefix? str2 str1))))
 
 ; contains(string, string)
 (define (lazy:core-contains num-anc arg-func1 arg-func2)
@@ -1413,7 +1412,7 @@
               )))))
       (and (not (null? lng))
            (or (string-ci=? arg (lazy:car lng))
-               (string-prefix-ci? (string-append arg "-") (lazy:car lng)))))))
+               (srfi:string-prefix-ci? (string-append arg "-") (lazy:car lng)))))))
 
 ;-------------------------------------------------
 ; 4.4 Number Functions

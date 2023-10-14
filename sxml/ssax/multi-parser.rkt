@@ -1,6 +1,6 @@
 #lang racket/base
 (require "myenv.ss"
-         srfi/13/string
+         "../util.rkt"
          "parse-error.ss"
          "SSAX-code.ss"
          "ssax-prim.ss"

@@ -1,7 +1,7 @@
 #lang racket/base
 (require (only-in racket/pretty [pretty-write pp])
          "myenv.ss"
-         srfi/13/string
+         "../util.rkt"
          "util.ss")
 (provide (all-defined-out))
 
@@ -173,7 +173,7 @@
 	      => (lambda (pos) 
 	      (and 
 		(= pos (string-length ns-id))
-		(string-prefix? ns-id nm))))
+		(srfi:string-prefix? ns-id nm))))
 	     (else (not ns-id)))))))
 ;^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

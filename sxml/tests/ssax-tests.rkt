@@ -5,7 +5,7 @@
          (only-in racket/pretty [pretty-write pp])
          (only-in racket/list [add-between list-intersperse])
          (only-in racket/base [quote racket:quote])
-         srfi/13/string
+         "../util.rkt"
          rackunit
          rackunit/text-ui
          (except-in "../ssax/myenv.ss" assert)

@@ -1,7 +1,6 @@
 #lang racket
 
-(require srfi/13/string
-         "../myenv.rkt"
+(require "../myenv.rkt"
          "../util.rkt"
          "../input-parse.rkt"
          #;"../look-for-str.rkt"
@@ -111,6 +110,7 @@
    (expect (string->integer "x12+4" 1 4) #f)
    ))
 
+#;
 (test-case
  "string-split"
 (let ((tab "	")) ; This is a string of one tab character

@@ -2,7 +2,7 @@
 (require racket/promise
          racket/vector
          "ssax/sxpathlib.rkt"
-         srfi/2
+         "util.rkt"
          "sxpath-ext.rkt"
          "txpath.rkt"
          "xpath-ast.rkt"
